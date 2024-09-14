@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q 
 
 from foodgram_backend import constants
 
@@ -22,7 +23,7 @@ class CommonInfo(models.Model):
 class Ingredient(CommonInfo):
     measurement_unit = models.CharField('Единица измерения')
 
-    class Meta:
+    class Meta(CommonInfo.Meta):
         verbose_name = 'ингридиент'
         verbose_name_plural = 'Ингридиенты'
 
@@ -30,7 +31,7 @@ class Ingredient(CommonInfo):
 class Tag(CommonInfo):
     slug = models.SlugField('Слаг', unique=True)
 
-    class Meta:
+    class Meta(CommonInfo.Meta):
         verbose_name = 'тег'
         verbose_name_plural = 'Теги'
 
@@ -52,3 +53,31 @@ class Recipe(CommonInfo):
     )
     image = models.ImageField('Картинка', upload_to='recipes/images/',
                               null=True, default=None)
+    
+    class Meta(CommonInfo.Meta):
+        default_related_name = 'recipes'
+        verbose_name = 'рецепт'
+        verbose_name_plural = 'Рецепты'
+
+
+class Cart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             verbose_name='Пользователь')
+    recipes = models.ManyToManyField(Recipe, verbose_name='Рецепты')
+
+
+class Follow(models.Model): 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, 
+                             related_name='following', to_field='username') # Проверить поле
+    following = models.ForeignKey( 
+        User, on_delete=models.CASCADE, 
+        related_name='followers', to_field='username' # Проверить поле
+    ) 
+
+    class Meta: 
+        constraints = [ 
+            models.UniqueConstraint(fields=['user', 'following'], 
+                                    name='unique_following'), 
+            models.CheckConstraint(check=~Q( 
+                user=models.F('following')), name='no self follow')
+        ]

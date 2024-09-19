@@ -7,15 +7,12 @@ from django.db.models import Q
 from foodgram_backend import constants
 
 
-# User = get_user_model()
-
-
 class User(AbstractUser):
     first_name = models.CharField('Имя',
                                   max_length=constants.FIRST_NAME_MAX_LEN)
     last_name = models.CharField('Фамилия',
                                  max_length=constants.LAST_NAME_MAX_LEN)
-    avatar = models.ImageField('Аватар', upload_to='avatars/',
+    avatar = models.ImageField('Аватар', upload_to='users/',
                                blank=True, default=None)
 
     class Meta(AbstractUser.Meta):
@@ -71,8 +68,11 @@ class Recipe(CommonInfo):
     )
     image = models.ImageField('Картинка', upload_to='recipes/images/',
                               null=True, default=None)
+    pub_date = models.DateTimeField('Дата и время публикации',
+                                    auto_now_add=True)
 
     class Meta(CommonInfo.Meta):
+        ordering = ['-pub_date', 'name']
         default_related_name = 'recipes'
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
@@ -109,11 +109,9 @@ class Cart(models.Model):
 
 class Follow(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE,
-                             related_name='following', to_field='username')  # Проверить поле
-    following = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='followers', to_field='username'  # Проверить поле
-    )
+                             related_name='following')
+    following = models.ForeignKey(User, on_delete=models.CASCADE,
+                                  related_name='followers')
 
     class Meta:
         verbose_name = 'подписка'

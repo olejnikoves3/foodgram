@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework import routers
 
 from api.views import IngredientViewSet, TagViewSet, UserViewSet
+
 # from api.views import (
 #     CategoryViewSet, CommentViewSet, GenreViewSet, GetTokenViewSet,
 #     ReviewViewSet, SignUpViewSet, TitleViewSet, UserViewSet)

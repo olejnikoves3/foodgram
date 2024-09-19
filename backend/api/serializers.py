@@ -2,9 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from recipes.models import (Ingredient, Follow, Recipe, RecipeIngredient,
-                            Tag)
-
+from recipes.models import (Ingredient, Follow, Tag)
 
 User = get_user_model()
 
@@ -23,13 +21,30 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'slug')
 
 
-class UserSerializer(serializers.ModelSerializer):
-    avatar = serializers.SerializerMethodField()
+class UserRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
         fields = ('email', 'id', 'username', 'first_name', 'last_name',
-                  'avatar')
+                  'password')
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class UserSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('email', 'id', 'username', 'first_name', 'last_name',
+                  'is_subscribed', 'avatar')
 
     def get_avatar(self, obj):
         request = self.context.get('request')
@@ -37,10 +52,16 @@ class UserSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.avatar.url)
         return None
 
+    def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
+        if user.is_authenticated:
+            return Follow.objects.filter(user=user, following=obj).exists()
+        return False
+
 
 class FollowSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField(
-        default=serializers.CurrentUserDefault())
+    user = serializers.StringRelatedField()
+    default = serializers.CurrentUserDefault()
 
     class Meta:
         model = Follow

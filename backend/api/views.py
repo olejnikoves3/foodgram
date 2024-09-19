@@ -3,10 +3,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 
-from api.serializers import IngredientSerializer, TagSerializer, UserSerializer
-from recipes.models import (Ingredient, Follow, Recipe, RecipeIngredient,
-                            Tag)
-
+from api.serializers import (IngredientSerializer, TagSerializer,
+                             UserSerializer, UserRegisterSerializer)
+from recipes.models import (Ingredient, Tag)
 
 User = get_user_model()
 
@@ -27,8 +26,13 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
     pagination_class = LimitOffsetPagination
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return UserRegisterSerializer
+        return UserSerializer
+
     #http_method_names = ['get', 'post', 'patch', 'delete']
 
     # @action(detail=False, methods=['get', 'patch'],

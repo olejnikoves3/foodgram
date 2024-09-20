@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, viewsets
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
 
-from api.serializers import (IngredientSerializer, TagSerializer,
+from api.serializers import (AvatarSerializer, IngredientSerializer, TagSerializer,
                              UserSerializer, UserRegisterSerializer)
 from recipes.models import (Ingredient, Tag)
 
@@ -32,19 +34,25 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.request.method == 'POST':
             return UserRegisterSerializer
         return UserSerializer
+    
+    @action(detail=False, url_path='me')
+    def me(self, request):
+        user = self.request.user
+        serializer = UserSerializer(user, context={'request': request})
+        return Response(serializer.data)
 
-    #http_method_names = ['get', 'post', 'patch', 'delete']
 
-    # @action(detail=False, methods=['get', 'patch'],
-    #         #permission_classes=[IsAuthenticated],
-    #         url_path='me')
-    # def me(self, request):
-    #     if request.method == 'GET':
-    #         serializer = self.get_serializer(request.user)
-    #         return Response(serializer.data)
-    #     serializer = self.get_serializer(
-    #         request.user, data=request.data,
-    #         partial=True)
-    #     serializer.is_valid(raise_exception=True)
-    #     serializer.save(role=request.user.role)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    @action(detail=False, methods=['put', 'delete'],
+            url_path='me/avatar')
+    def avatar(self, request):
+        user = self.request.user
+        if request.method == 'PUT':
+            serializer = AvatarSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user.avatar = serializer.validated_data['avatar']
+            user.save()
+            avatar_url = request.build_absolute_uri(user.avatar.url)
+            return Response({'avatar': avatar_url}, status=status.HTTP_200_OK)
+        user.avatar.delete()
+        user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

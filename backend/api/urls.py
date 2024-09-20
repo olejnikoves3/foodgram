@@ -3,19 +3,21 @@ from rest_framework import routers
 
 from api.views import IngredientViewSet, TagViewSet, UserViewSet
 
-# from api.views import (
-#     CategoryViewSet, CommentViewSet, GenreViewSet, GetTokenViewSet,
-#     ReviewViewSet, SignUpViewSet, TitleViewSet, UserViewSet)
-
 
 app_name = 'api'
 
 router = routers.DefaultRouter()
 router.register('tags', TagViewSet)
 router.register('ingredients', IngredientViewSet)
+router.register('users', UserViewSet, basename='user')
+
+urlpatterns = [
+    path('', include(router.urls)),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.jwt')),
+]
 # router_v1.register('auth/signup', SignUpViewSet, basename='signup')
 # router_v1.register('auth/token', GetTokenViewSet, basename='token')
-router.register('users', UserViewSet, basename='user')
 # router_v1.register(
 #     r'titles/(?P<title_id>\d+)/reviews', ReviewViewSet,
 #     'title-reviews')
@@ -26,7 +28,3 @@ router.register('users', UserViewSet, basename='user')
 # router_v1.register('genres', GenreViewSet)
 # router_v1.register('categories', CategoryViewSet)
 # router_v1.register('titles', TitleViewSet)
-
-urlpatterns = [
-    path('', include(router.urls)),
-]

@@ -96,14 +96,21 @@ class RecipeIngredient(models.Model):
 
 
 class Cart(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,
-                             verbose_name='Пользователь')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        verbose_name='Пользователь',
+        related_name='recipes_in_cart'
+    )
     recipe = models.ForeignKey(Recipe, verbose_name='Рецепт',
                                on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'список покупок'
         verbose_name_plural = 'Списки покупок'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'recipe'],
+                                    name='unique_recipe_in_cart'),
+        ]
 
 
 class Follow(models.Model):

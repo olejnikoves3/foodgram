@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from recipes.models import (Ingredient, Follow, Tag)
+from recipes.models import (Ingredient, Follow, Recipe, Tag)
 
 User = get_user_model()
 
@@ -95,3 +95,16 @@ class FollowSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Нельзя подписываться на сомого себя')
         return value
+
+
+class RecipeSerializer(serializers.ModelSerializer):
+    tags = TagSerializer(required=True, many=True)
+    author = UserSerializer(read_only=True)
+    ingredients = IngredientSerializer(required=True, many=True)
+    image = Base64ImageField()
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image',
+                  'text', 'cooking_time')
+        

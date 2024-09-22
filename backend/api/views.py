@@ -6,7 +6,8 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from api.serializers import (
-    AvatarSerializer, IngredientSerializer, RecipeSerializer, TagSerializer,
+    AvatarSerializer, IngredientSerializer, RecipeCreateUpdateSerializer,
+    RecipeReadSerializer, TagSerializer,
     UserSerializer, UserRegisterSerializer
 )
 from recipes.models import (Cart, Ingredient, Recipe, Tag)
@@ -24,13 +25,14 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = IngredientSerializer
     # Разобраться с поиском
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
-    filterset_fields = ('^name', 'name')
+    # filterset_fields = ('^name', 'name')
     search_fields = ('^name', 'name')
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     pagination_class = LimitOffsetPagination
+    http_method_names = ['get', 'post']
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -59,13 +61,17 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('author')
+    filterset_fields = ('author',)
+
+    def get_serializer_class(self):
+        if self.request.method in ('POST', 'PATCH'):
+            return RecipeCreateUpdateSerializer
+        return RecipeReadSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = Recipe.objects.prefetch_related(
+            'tags', 'ingredients').select_related('author')
 
         # Фильтр по избранному
         is_favorited = self.request.query_params.get('is_favorited')
@@ -75,11 +81,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
             queryset = queryset.exclude(favorited_by__user=self.request.user)
 
         # Фильтр по списку покупок
-        is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
+        is_in_shopping_cart = self.request.query_params.get(
+            'is_in_shopping_cart')
         if is_in_shopping_cart == '1':
-            queryset = queryset.filter(in_shopping_cart__user=self.request.user)
+            queryset = queryset.filter(
+                in_shopping_cart__user=self.request.user)
         elif is_in_shopping_cart == '0':
-            queryset = queryset.exclude(in_shopping_cart__user=self.request.user)
+            queryset = queryset.exclude(
+                in_shopping_cart__user=self.request.user)
 
         # Фильтр по автору
         author_id = self.request.query_params.get('author')
@@ -92,3 +101,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tags__slug__in=tags).distinct()
 
         return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)

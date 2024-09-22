@@ -13,9 +13,10 @@ class User(AbstractUser):
                                  max_length=constants.LAST_NAME_MAX_LEN)
     avatar = models.ImageField('Аватар', upload_to='users/',
                                blank=True, default=None)
+    email = models.EmailField()
 
     class Meta(AbstractUser.Meta):
-        ordering = ['username']
+        ordering = ['username', 'last_name', 'id']
         verbose_name = 'пользователь'
         verbose_name_plural = 'Пользователи'
 
@@ -24,7 +25,8 @@ class User(AbstractUser):
 
 
 class CommonInfo(models.Model):
-    name = models.CharField('Название', max_length=constants.NAME_MAX_LENGTH)
+    name = models.CharField(
+        'Название', max_length=constants.NAME_MAX_LENGTH, unique=True)
 
     class Meta:
         abstract = True
@@ -86,9 +88,16 @@ class RecipeIngredient(models.Model):
         Ingredient, on_delete=models.CASCADE, verbose_name='Ингредиент',
         related_name='ingredient_recipes'
     )
-    amount = models.PositiveSmallIntegerField('Количество')
+    amount = models.PositiveSmallIntegerField(
+        'Количество', validators=[
+            MinValueValidator(constants.MIN_AMOUNT),
+        ]
+    )
 
     class Meta:
+        ordering = ('recipe',)
+        verbose_name = 'ингридиенты в рецепте'
+        verbose_name_plural = 'Ингридиенты в рецепте'
         constraints = [
             models.UniqueConstraint(fields=['recipe', 'ingredient'],
                                     name='unique_ingredient')
@@ -109,7 +118,25 @@ class Cart(models.Model):
         verbose_name_plural = 'Списки покупок'
         constraints = [
             models.UniqueConstraint(fields=['user', 'recipe'],
-                                    name='unique_recipe_in_cart'),
+                                    name='unique recipe in cart'),
+        ]
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        verbose_name='Пользователь',
+        related_name='favorited_recipes'
+    )
+    recipe = models.ForeignKey(Recipe, verbose_name='Рецепт',
+                               on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = 'избранное'
+        verbose_name_plural = 'Избранное'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'recipe'],
+                                    name='unique recipe in favorited'),
         ]
 
 

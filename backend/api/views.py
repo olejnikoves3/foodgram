@@ -1,9 +1,9 @@
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
+from djoser.serializers import SetPasswordSerializer
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.serializers import (
@@ -13,17 +13,20 @@ from api.serializers import (
 )
 from recipes.models import (Cart, Ingredient, Recipe, Tag)
 
+
 User = get_user_model()
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    pagination_class = None
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    pagination_class = None
     # Разобраться с поиском
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
     # filterset_fields = ('^name', 'name')
@@ -32,22 +35,30 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    pagination_class = LimitOffsetPagination
     permission_classes = (AllowAny,)
-    http_method_names = ['get', 'post']
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return UserRegisterSerializer
         return UserSerializer
 
-    @action(detail=False, url_path='me')
+    @action(["post"], detail=False)
+    def set_password(self, request):
+        serializer = SetPasswordSerializer(data=request.data,
+                                           context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.data["new_password"])
+        request.user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, url_path='me', permission_classes=[IsAuthenticated])
     def me(self, request):
         user = self.request.user
         serializer = UserSerializer(user, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False, methods=['put', 'delete'],
+            permission_classes=[IsAuthenticated],
             url_path='me/avatar')
     def avatar(self, request):
         user = self.request.user
@@ -63,6 +74,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    pagination_class = CustomPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('author',)
 

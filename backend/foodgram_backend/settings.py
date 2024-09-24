@@ -2,6 +2,8 @@ from pathlib import Path
 
 from django.contrib.auth import get_user_model
 
+from foodgram_backend.constants import PAGINATION_PAGE_NUMBER
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -110,6 +112,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': PAGINATION_PAGE_NUMBER
 }
 
 DJOSER = {

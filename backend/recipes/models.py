@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
@@ -10,11 +11,12 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
-    
+
     email = models.EmailField('Электронная почта', unique=True)
     username = models.CharField(
         'Имя пользователя', unique=True,
-        max_length=constants.USERNAME_MAX_LEN
+        max_length=constants.USERNAME_MAX_LEN,
+        validators=(UnicodeUsernameValidator,)
     )
     first_name = models.CharField('Имя',
                                   max_length=constants.FIRST_NAME_MAX_LEN)
@@ -22,8 +24,6 @@ class User(AbstractUser):
                                  max_length=constants.LAST_NAME_MAX_LEN)
     avatar = models.ImageField('Аватар', upload_to='users/',
                                blank=True, default=None)
-    
-    
 
     class Meta(AbstractUser.Meta):
         ordering = ['username', 'last_name', 'id']

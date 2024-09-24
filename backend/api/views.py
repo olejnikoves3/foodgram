@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.serializers import SetPasswordSerializer
 from rest_framework import filters, status, viewsets
@@ -8,7 +9,7 @@ from rest_framework.response import Response
 
 from api.serializers import (
     AvatarSerializer, IngredientSerializer, RecipeCreateUpdateSerializer,
-    RecipeReadSerializer, TagSerializer,
+    RecipeReadSerializer, ShortRecipeSerializer, TagSerializer,
     UserSerializer, UserRegisterSerializer
 )
 from recipes.models import (Cart, Ingredient, Recipe, Tag)
@@ -42,7 +43,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return UserRegisterSerializer
         return UserSerializer
 
-    @action(["post"], detail=False)
+    @action(['post'], detail=False)
     def set_password(self, request):
         serializer = SetPasswordSerializer(data=request.data,
                                            context={'request': request})
@@ -57,7 +58,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = UserSerializer(user, context={'request': request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=['put', 'delete'],
+    @action(['put', 'delete'], False,
             permission_classes=[IsAuthenticated],
             url_path='me/avatar')
     def avatar(self, request):
@@ -74,7 +75,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    pagination_class = CustomPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('author',)
 
@@ -118,3 +118,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    @action(['post'], True, permission_classes=[IsAuthenticated],)
+    def shopping_cart(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        Recipe.objects.get(id=pk)
+        Cart.objects.create(user=user, recipe=recipe)
+        serializer = ShortRecipeSerializer(recipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

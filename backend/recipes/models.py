@@ -112,6 +112,9 @@ class RecipeIngredient(models.Model):
             models.UniqueConstraint(fields=['recipe', 'ingredient'],
                                     name='unique_ingredient')
         ]
+    
+    def __str__(self):
+        return f'{self.ingredient.name} в {self.recipe.name}'
 
 
 class Cart(models.Model):
@@ -131,6 +134,8 @@ class Cart(models.Model):
                                     name='unique recipe in cart'),
         ]
 
+    def __str__(self):
+        return f'{self.recipe.name} в корзине у {self.user.username}'
 
 class Favorite(models.Model):
     user = models.ForeignKey(

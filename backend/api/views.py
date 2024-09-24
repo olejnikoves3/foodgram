@@ -3,6 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from api.serializers import (
@@ -32,6 +33,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     pagination_class = LimitOffsetPagination
+    permission_classes = (AllowAny,)
     http_method_names = ['get', 'post']
 
     def get_serializer_class(self):

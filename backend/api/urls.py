@@ -13,9 +13,10 @@ router.register('users', UserViewSet, basename='user')
 router.register('recipes', RecipeViewSet, basename='recipe')
 
 urlpatterns = [
+    #path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
     path('', include(router.urls)),
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
+    
 ]
 # router_v1.register('auth/signup', SignUpViewSet, basename='signup')
 # router_v1.register('auth/token', GetTokenViewSet, basename='token')

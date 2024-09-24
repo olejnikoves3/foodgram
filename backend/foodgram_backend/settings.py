@@ -1,5 +1,6 @@
-from datetime import timedelta
 from pathlib import Path
+
+from django.contrib.auth import get_user_model
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,7 +10,7 @@ SECRET_KEY = 'django-insecure-6*0acpq4daydqcsgxw7jcibu04%%ud2c9#dyg%qhxqh8lpu=tb
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 INSTALLED_APPS = [
@@ -20,6 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'djoser',
     'django_filters',
     'recipes.apps.RecipesConfig',
@@ -102,18 +104,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        'rest_framework.permissions.AllowAny',
     ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
-
-    'PAGE_SIZE': 6,
 }
 
-SIMPLE_JWT = {
-
-   'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-   'AUTH_HEADER_TYPES': ('Token',),
-} 
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+}

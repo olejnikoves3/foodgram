@@ -7,13 +7,23 @@ from foodgram_backend import constants
 
 
 class User(AbstractUser):
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
+    
+    email = models.EmailField('Электронная почта', unique=True)
+    username = models.CharField(
+        'Имя пользователя', unique=True,
+        max_length=constants.USERNAME_MAX_LEN
+    )
     first_name = models.CharField('Имя',
                                   max_length=constants.FIRST_NAME_MAX_LEN)
     last_name = models.CharField('Фамилия',
                                  max_length=constants.LAST_NAME_MAX_LEN)
     avatar = models.ImageField('Аватар', upload_to='users/',
                                blank=True, default=None)
-    email = models.EmailField()
+    
+    
 
     class Meta(AbstractUser.Meta):
         ordering = ['username', 'last_name', 'id']
@@ -129,7 +139,8 @@ class Favorite(models.Model):
         related_name='favorited_recipes'
     )
     recipe = models.ForeignKey(Recipe, verbose_name='Рецепт',
-                               on_delete=models.CASCADE)
+                               on_delete=models.CASCADE,
+                               related_name='in_favorite')
 
     class Meta:
         verbose_name = 'избранное'

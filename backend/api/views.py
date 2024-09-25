@@ -8,9 +8,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.serializers import (
-    AvatarSerializer, IngredientSerializer, RecipeCreateUpdateSerializer,
-    RecipeReadSerializer, ShortRecipeSerializer, TagSerializer,
-    UserSerializer, UserRegisterSerializer
+    AvatarSerializer, IngredientSerializer, RecipeCreateSerializer, 
+    RecipeUpdateSerializer, RecipeReadSerializer, ShortRecipeSerializer, 
+    TagSerializer, UserSerializer, UserRegisterSerializer
 )
 from recipes.models import (Cart, Ingredient, Recipe, Tag)
 
@@ -77,10 +77,13 @@ class UserViewSet(viewsets.ModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('author',)
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
-        if self.request.method in ('POST', 'PATCH'):
-            return RecipeCreateUpdateSerializer
+        if self.request.method == 'POST':
+            return RecipeCreateSerializer
+        elif self.request.method == 'PATCH':
+            return RecipeUpdateSerializer
         return RecipeReadSerializer
 
     def get_queryset(self):
@@ -117,7 +120,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        self.object = serializer.save(author=self.request.user)
+    
+    def perform_update(self, serializer):
+        self.object = serializer.save()
+
+    def create(self, request, *args, **kwargs):
+        super().create(request, *args, **kwargs)
+        serializer = RecipeReadSerializer(instance=self.object)
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        super().update(request, *args, **kwargs)
+        serializer = RecipeReadSerializer(instance=self.object)
+        return Response(serializer.data)
 
     @action(['post'], True, permission_classes=[IsAuthenticated],)
     def shopping_cart(self, request, pk=None):

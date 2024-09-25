@@ -66,7 +66,7 @@ class Tag(CommonInfo):
 
 
 class Recipe(CommonInfo):
-    tags = models.ManyToManyField(Tag, verbose_name='Тег')
+    tags = models.ManyToManyField(Tag, through='RecipeTag', verbose_name='Тег')
     author = models.ForeignKey(User, on_delete=models.CASCADE,
                                verbose_name='Автор')
     ingredients = models.ManyToManyField(
@@ -87,6 +87,26 @@ class Recipe(CommonInfo):
         default_related_name = 'recipes'
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
+
+
+class RecipeTag(models.Model):
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, verbose_name='Рецепт',
+        related_name='recipe_tags'
+    )
+    tag = models.ForeignKey(
+        Tag, on_delete=models.CASCADE, verbose_name='Тег',
+        related_name='tag_recipes'
+    )
+
+    class Meta:
+        ordering = ('recipe',)
+        verbose_name = 'теги рецептов'
+        verbose_name_plural = 'Теги рецептов'
+        constraints = [
+            models.UniqueConstraint(fields=['recipe', 'tag'],
+                                    name='unique_tag')
+        ]
 
 
 class RecipeIngredient(models.Model):
@@ -112,7 +132,7 @@ class RecipeIngredient(models.Model):
             models.UniqueConstraint(fields=['recipe', 'ingredient'],
                                     name='unique_ingredient')
         ]
-    
+
     def __str__(self):
         return f'{self.ingredient.name} в {self.recipe.name}'
 
@@ -136,6 +156,7 @@ class Cart(models.Model):
 
     def __str__(self):
         return f'{self.recipe.name} в корзине у {self.user.username}'
+
 
 class Favorite(models.Model):
     user = models.ForeignKey(

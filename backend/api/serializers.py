@@ -231,9 +231,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         basic, many2us = self.split_validated_data(validated_data)
         return self.update_many2us(super().update(instance, basic), many2us)
 
-    # def to_representation(self, instance):
-    #     return RecipeReadSerializer(instance).data
-
 
 class RecipeUpdateSerializer(RecipeCreateSerializer):
     image = Base64ImageField(required=False)

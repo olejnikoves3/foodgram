@@ -192,3 +192,6 @@ class Follow(models.Model):
             models.CheckConstraint(check=~Q(
                 user=models.F('following')), name='no self follow')
         ]
+
+    def __str__(self):
+        return f'{self.user.username} подписан на {self.following.username}'

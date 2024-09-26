@@ -1,19 +1,23 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.serializers import SetPasswordSerializer
-from rest_framework import filters, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
 from api.filters import IngredientSearch
+from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     AvatarSerializer, IngredientSerializer, RecipeCreateSerializer,
     RecipeUpdateSerializer, RecipeReadSerializer, ShortRecipeSerializer,
-    TagSerializer, UserSerializer, UserRegisterSerializer
+    TagSerializer, UserSerializer, UserRegisterSerializer, UserWithRecipes
 )
-from recipes.models import (Cart, Ingredient, Recipe, Tag)
+from recipes.models import (Cart, Follow, Ingredient, Recipe, Tag)
 
 
 User = get_user_model()
@@ -53,7 +57,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, url_path='me', permission_classes=[IsAuthenticated])
     def me(self, request):
-        user = self.request.user
+        user = request.user
         serializer = UserSerializer(user, context={'request': request})
         return Response(serializer.data)
 
@@ -72,11 +76,43 @@ class UserViewSet(viewsets.ModelViewSet):
         user.avatar.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(['get'], False, permission_classes=[IsAuthenticated], )
+    def subscriptions(self, request):
+        user = request.user
+        paginator = LimitOffsetPagination()
+        queryset = User.objects.filter(followers__user=user).annotate(
+            recipe_count=Count('recipes')).order_by('-id')
+        paginated_queryset = paginator.paginate_queryset(queryset, request)
+        serializer = UserWithRecipes(paginated_queryset, many=True,
+                                     context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
+
+    @action(['post'], True, permission_classes=[IsAuthenticated],)
+    def subscribe(self, request, pk=None):
+        user = request.user
+        user_to_follow = get_object_or_404(User, id=pk)
+        if user == user_to_follow:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if Follow.objects.filter(user=user, following=user_to_follow):
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        Follow.objects.create(user=user, following=user_to_follow)
+        obj = User.objects.annotate(recipe_count=Count('recipes')).get(id=pk)
+        serializer = UserWithRecipes(obj, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @subscribe.mapping.delete
+    def delete_subscription(self, request, pk=None):
+        user = request.user
+        user_to_unfollow = get_object_or_404(User, id=pk)
+        Follow.objects.filter(user=user, following=user_to_unfollow).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('author',)
     http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -128,7 +164,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         super().create(request, *args, **kwargs)
         serializer = RecipeReadSerializer(instance=self.object,
                                           context={'request': request})
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         super().update(request, *args, **kwargs)
@@ -140,7 +176,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def shopping_cart(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
-        Recipe.objects.get(id=pk)
         Cart.objects.create(user=user, recipe=recipe)
         serializer = ShortRecipeSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

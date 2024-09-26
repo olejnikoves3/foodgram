@@ -93,13 +93,6 @@ class FollowSerializer(serializers.ModelSerializer):
         return value
 
 
-class ShortRecipeSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
-
-
 class RecipeIngredientReadSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
@@ -142,9 +135,25 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         return False
 
 
+class ShortRecipeSerializer(RecipeReadSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.image:
+            return request.build_absolute_uri(obj.image.url)
+        return None
+
+
 class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(
-        queryset=Ingredient.objects.all())
+        queryset=Ingredient.objects.all(),
+    )
+    amount = serializers.IntegerField(min_value=1)
 
     class Meta:
         model = RecipeIngredient
@@ -155,8 +164,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True,
     )
-    ingredients = RecipeIngredientWriteSerializer(source='recipe_ingredients',
-                                                  many=True)
+    ingredients = RecipeIngredientWriteSerializer(
+        source='recipe_ingredients', many=True,
+    )
     image = Base64ImageField()
 
     MANY_FIELDS = {'tags': 'update_tags',
@@ -231,6 +241,51 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         basic, many2us = self.split_validated_data(validated_data)
         return self.update_many2us(super().update(instance, basic), many2us)
 
+    def validate_tags(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "Обязательное поле."
+            )
+        unique_tags = {tag.id for tag in value}
+        if len(value) != len(unique_tags):
+            raise serializers.ValidationError(
+                "В запросе содержатся повторяющиеся теги."
+            )
+        return value
+
+    def validate_ingredients(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "Обязательное поле."
+            )
+        unique_ingredients = {ing['id'].id for ing in value}
+        if len(value) != len(unique_ingredients):
+            raise serializers.ValidationError(
+                "В запросе содержатся повторяющиеся ингридиенты."
+            )
+        return value
+
 
 class RecipeUpdateSerializer(RecipeCreateSerializer):
     image = Base64ImageField(required=False)
+
+
+class UserWithRecipes(UserSerializer):
+    recipes = serializers.SerializerMethodField()
+    recipe_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = User
+        fields = ('email', 'id', 'username', 'first_name', 'last_name',
+                  'is_subscribed', 'recipes', 'recipe_count', 'avatar')
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        recipes = obj.recipes.all()
+        try:
+            limit = int(request.query_params.get('recipes_limit'))
+            recipes = recipes[:limit]
+        except TypeError:
+            pass
+        return ShortRecipeSerializer(recipes, many=True,
+                                     context={'request': request}).data

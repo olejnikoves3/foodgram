@@ -7,9 +7,10 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from api.filters import IngredientSearch
 from api.serializers import (
-    AvatarSerializer, IngredientSerializer, RecipeCreateSerializer, 
-    RecipeUpdateSerializer, RecipeReadSerializer, ShortRecipeSerializer, 
+    AvatarSerializer, IngredientSerializer, RecipeCreateSerializer,
+    RecipeUpdateSerializer, RecipeReadSerializer, ShortRecipeSerializer,
     TagSerializer, UserSerializer, UserRegisterSerializer
 )
 from recipes.models import (Cart, Ingredient, Recipe, Tag)
@@ -28,10 +29,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    # Разобраться с поиском
-    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
-    # filterset_fields = ('^name', 'name')
-    search_fields = ('^name', 'name')
+    filter_backends = [IngredientSearch]
+    search_fields = ['name']
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -121,7 +120,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         self.object = serializer.save(author=self.request.user)
-    
+
     def perform_update(self, serializer):
         self.object = serializer.save()
 

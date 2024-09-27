@@ -92,11 +92,13 @@ class UserViewSet(viewsets.ModelViewSet):
         user = request.user
         user_to_follow = get_object_or_404(User, id=pk)
         if user == user_to_follow:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response('Нельзя подписаться на самого себя',
+                            status=status.HTTP_400_BAD_REQUEST)
         if Follow.objects.filter(user=user, following=user_to_follow):
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response('Вы уже подписаны на этого пользователя',
+                            status=status.HTTP_400_BAD_REQUEST)
         Follow.objects.create(user=user, following=user_to_follow)
-        obj = User.objects.annotate(recipe_count=Count('recipes')).get(id=pk)
+        obj = User.objects.annotate(recipes_count=Count('recipes')).get(id=pk)
         serializer = UserWithRecipes(obj, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -104,8 +106,13 @@ class UserViewSet(viewsets.ModelViewSet):
     def delete_subscription(self, request, pk=None):
         user = request.user
         user_to_unfollow = get_object_or_404(User, id=pk)
-        Follow.objects.filter(user=user, following=user_to_unfollow).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if Follow.objects.filter(
+                user=user, following=user_to_unfollow).exists():
+            Follow.objects.filter(
+                user=user, following=user_to_unfollow).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response('Вы не подписаны на этого пользователя',
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -176,6 +183,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def shopping_cart(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
+        if Cart.objects.filter(user=user, recipe=recipe).exists():
+            return Response('Рецепт уже добавлен в корзину',
+                            status=status.HTTP_400_BAD_REQUEST)
         Cart.objects.create(user=user, recipe=recipe)
-        serializer = ShortRecipeSerializer(recipe)
+        serializer = ShortRecipeSerializer(recipe,
+                                           context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @shopping_cart.mapping.delete
+    def delete_from_shopping_cart(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        if Cart.objects.filter(user=user, recipe=recipe).exists():
+            Cart.objects.filter(user=user, recipe=recipe).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response('Рецепт не был добавлен в корзину',
+                        status=status.HTTP_400_BAD_REQUEST)

@@ -1,4 +1,5 @@
 import base64
+import re
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -34,6 +35,13 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ('email', 'id', 'username', 'first_name', 'last_name',
                   'password')
+
+    def validate_username(self, value):
+        if not re.match(r'^[\w.@+-]+$', value):
+            raise serializers.ValidationError(
+                'Недопустимые символы в имени пользователя.'
+            )
+        return value
 
     def create(self, validated_data):
         password = validated_data.pop('password')
@@ -162,10 +170,10 @@ class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
-        queryset=Tag.objects.all(), many=True,
+        queryset=Tag.objects.all(), many=True, required=True
     )
     ingredients = RecipeIngredientWriteSerializer(
-        source='recipe_ingredients', many=True,
+        source='recipe_ingredients', many=True, required=True
     )
     image = Base64ImageField()
 
@@ -183,9 +191,12 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         old_tags_ids = set(instance.tags.values_list('id', flat=True))
         new_tags_ids = set([a.id for a in data])
         RecipeTag.objects.filter(
-            recipe_id=instance.id, tag_id__in=old_tags_ids - new_tags_ids).delete()
+            recipe_id=instance.id, tag_id__in=old_tags_ids - new_tags_ids
+        ).delete()
         RecipeTag.objects.bulk_create([
-            RecipeTag(recipe_id=instance.id, tag_id=tag_id) for tag_id in new_tags_ids - old_tags_ids
+            RecipeTag(
+                recipe_id=instance.id, tag_id=tag_id
+            ) for tag_id in new_tags_ids - old_tags_ids
         ])
 
     @classmethod
@@ -244,7 +255,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate_tags(self, value):
         if not value:
             raise serializers.ValidationError(
-                "Обязательное поле."
+                "Поле не может быть пустым."
             )
         unique_tags = {tag.id for tag in value}
         if len(value) != len(unique_tags):
@@ -256,7 +267,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate_ingredients(self, value):
         if not value:
             raise serializers.ValidationError(
-                "Обязательное поле."
+                "Поле не может быть пустым."
             )
         unique_ingredients = {ing['id'].id for ing in value}
         if len(value) != len(unique_ingredients):
@@ -269,15 +280,28 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 class RecipeUpdateSerializer(RecipeCreateSerializer):
     image = Base64ImageField(required=False)
 
+    def validate(self, data):
+        required_fields = [
+            'tags', 'recipe_ingredients', 'name', 'text', 'cooking_time'
+        ]
+        missing_fields = [
+            field for field in required_fields if field not in data
+        ]
+        if missing_fields:
+            raise serializers.ValidationError(
+                f"Отсутствуют обязательные поля: {', '.join(missing_fields)}"
+            )
+        return data
+
 
 class UserWithRecipes(UserSerializer):
     recipes = serializers.SerializerMethodField()
-    recipe_count = serializers.IntegerField(read_only=True, default=0)
+    recipes_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = User
         fields = ('email', 'id', 'username', 'first_name', 'last_name',
-                  'is_subscribed', 'recipes', 'recipe_count', 'avatar')
+                  'is_subscribed', 'recipes', 'recipes_count', 'avatar')
 
     def get_recipes(self, obj):
         request = self.context.get('request')

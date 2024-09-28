@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from django.contrib.auth import get_user_model
-
 from foodgram_backend.constants import PAGINATION_PAGE_NUMBER
 
 
@@ -25,7 +23,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
-    'django_filters',
+    #'django_filters',
     'recipes.apps.RecipesConfig',
     'api.apps.ApiConfig',
 ]

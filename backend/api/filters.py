@@ -1,5 +1,9 @@
-from rest_framework.filters import BaseFilterBackend
+from django.contrib.auth import get_user_model
 from django.db.models import Case, When, Value, IntegerField
+from rest_framework.filters import BaseFilterBackend
+
+
+User = get_user_model()
 
 
 class IngredientSearch(BaseFilterBackend):
@@ -15,4 +19,23 @@ class IngredientSearch(BaseFilterBackend):
                     output_field=IntegerField(),
                 )
             ).order_by('starts_with', 'name')
+        return queryset
+
+
+class RecipeFilter (BaseFilterBackend):
+
+    def filter_queryset(self, request, queryset, view):
+        author_id = request.query_params.get('author')
+        if author_id:
+            queryset = queryset.filter(author__id=author_id)
+        tags = request.query_params.getlist('tags')
+        if tags:
+            queryset = queryset.filter(tags__slug__in=tags).distinct()
+        is_favorited = request.query_params.get('is_favorited')
+        if is_favorited == '1' and request.user.is_authenticated:
+            queryset = queryset.filter(in_favorite__user=request.user)
+        is_in_shopping_cart = request.query_params.get(
+            'is_in_shopping_cart')
+        if is_in_shopping_cart == '1' and request.user.is_authenticated:
+            queryset = queryset.filter(in_users_carts__user=request.user)
         return queryset

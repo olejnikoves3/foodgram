@@ -5,7 +5,7 @@ environs==11.0.0
 webcolors==1.11.1
 psycopg2-binary==2.9.3
 Pillow==9.0.0
-#django-filter==23.3
+reportlab==4.2.4
 short_url==1.2.2
 # pytest==6.2.4
 # pytest-django==4.4.0

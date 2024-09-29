@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
@@ -19,6 +18,7 @@ from api.serializers import (
     TagSerializer, UserSerializer, UserRegisterSerializer, UserWithRecipes
 )
 from recipes.models import (Cart, Favorite, Follow, Ingredient, Recipe, Tag)
+from api.utils import generate_pdf
 
 
 User = get_user_model()
@@ -148,6 +148,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                           context={'request': request})
         return Response(serializer.data)
 
+    @action(['get'], False, permission_classes=[IsAuthenticated],)
+    def download_shopping_cart(self, request):
+        user = request.user
+        recipes_in_cart = user.recipes_in_cart.all()
+        ingredients_summary = {}
+        for cart_item in recipes_in_cart:
+            recipe = cart_item.recipe
+            for recipe_ingredient in recipe.recipe_ingredients.all():
+                ingredient_name = recipe_ingredient.ingredient.name
+                if ingredient_name in ingredients_summary:
+                    ingredients_summary[
+                        ingredient_name]['amount'] += recipe_ingredient.amount
+                else:
+                    mes_unit = recipe_ingredient.ingredient.measurement_unit
+                    ingredients_summary[ingredient_name] = {}
+                    ingredients_summary[
+                        ingredient_name]['amount'] = recipe_ingredient.amount
+                    ingredients_summary[
+                        ingredient_name]['mes_unit'] = mes_unit
+        return generate_pdf(ingredients_summary)
+
     @action(['post'], True, permission_classes=[IsAuthenticated],)
     def shopping_cart(self, request, pk=None):
         user = request.user
@@ -195,7 +216,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(['get'], True, permission_classes=[AllowAny],
             url_path='get-link')
     def get_link(self, request, pk=None):
-        # recipe_id = get_object_or_404(Recipe, id=pk).id
         domain = request.get_host()
         s_url = short_url.encode_url(int(pk))
         url = "https://{}/s/{}".format(domain, s_url)

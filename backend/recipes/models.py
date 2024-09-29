@@ -108,6 +108,9 @@ class RecipeTag(models.Model):
                                     name='unique_tag')
         ]
 
+    def __str__(self):
+        return f'У рецепта {self.recipe.name} тег {self.tag.name}'
+
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
@@ -134,7 +137,10 @@ class RecipeIngredient(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.ingredient.name} в {self.recipe.name}'
+        return (
+            f'{self.ingredient.name} в {self.recipe.name} в количестве '
+            f'{self.amount} {self.ingredient.measurement_unit}'
+        )
 
 
 class Cart(models.Model):
@@ -177,6 +183,9 @@ class Favorite(models.Model):
             models.UniqueConstraint(fields=['user', 'recipe'],
                                     name='unique recipe in favorited'),
         ]
+
+    def __str__(self):
+        return f'{self.recipe.name} в избранном у {self.user.username}'
 
 
 class Follow(models.Model):

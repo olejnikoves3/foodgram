@@ -6,7 +6,11 @@ from recipes.models import (Cart, Ingredient, Favorite, Follow, Recipe,
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    pass
+    list_display = (
+        'name',
+        'measurement_unit',
+    )
+    search_fields = ('username',)
 
 
 @admin.register(Follow)
@@ -31,7 +35,18 @@ class TagAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    pass
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+    )
+    search_fields = (
+        'username',
+        'email'
+    )
+    ordering = ('username',)
+
 
 
 @admin.register(Cart)

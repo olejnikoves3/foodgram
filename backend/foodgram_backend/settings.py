@@ -1,16 +1,22 @@
+import os
 from pathlib import Path
+
+from environs import Env
 
 from foodgram_backend.constants import PAGINATION_PAGE_NUMBER
 
 
+env = Env()
+env.read_env()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-SECRET_KEY = 'django-insecure-6*0acpq4daydqcsgxw7jcibu04%%ud2c9#dyg%qhxqh8lpu=tb'
+SECRET_KEY = os.getenv('SECRET_KEY', 'secret_key')
 
-DEBUG = True
+DEBUG = env.bool('DEBUG', False)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', 'localhost')
 
 
 INSTALLED_APPS = [
@@ -60,8 +66,12 @@ WSGI_APPLICATION = 'foodgram_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'django'),
+        'USER': os.getenv('POSTGRES_USER', 'django'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', 5432)
     }
 }
 

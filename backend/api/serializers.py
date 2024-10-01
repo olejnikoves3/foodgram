@@ -204,14 +204,17 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         old_ingredients_dict = {
             ri.ingredient_id: ri for ri in instance.recipe_ingredients.all()}
         new_ingredients_dict = {
-            ri['id'].id: ri for ri in new_ingredients if ri['id'].id not in old_ingredients_dict}
+            ri['id'].id: ri for ri in new_ingredients if ri[
+                'id'].id not in old_ingredients_dict}
         updated_ingredients_dict = {
-            ri['id'].id: ri for ri in new_ingredients if ri['id'].id in old_ingredients_dict}
+            ri['id'].id: ri for ri in new_ingredients if ri[
+                'id'].id in old_ingredients_dict}
         old_ingredients_set = set(old_ingredients_dict.keys()) - \
             set(updated_ingredients_dict.keys())
         updated_ingredients_dict = dict(filter(
             lambda kv: kv[1]['amount'] != old_ingredients_dict[kv[0]].amount
-            and (kv[1]['amount'] is not None or old_ingredients_dict[kv[0]].amount is not None),
+            and (kv[1]['amount'] is not None or old_ingredients_dict[
+                kv[0]].amount is not None),
             updated_ingredients_dict.items()
         ))
         RecipeIngredient.objects.filter(

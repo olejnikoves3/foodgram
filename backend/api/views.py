@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Count
-from django.shortcuts import get_object_or_404
 from djoser.serializers import SetPasswordSerializer
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
@@ -17,8 +17,8 @@ from api.serializers import (
     RecipeUpdateSerializer, RecipeReadSerializer, ShortRecipeSerializer,
     TagSerializer, UserSerializer, UserRegisterSerializer, UserWithRecipes
 )
-from recipes.models import (Cart, Favorite, Follow, Ingredient, Recipe, Tag)
 from api.utils import generate_pdf
+from recipes.models import Cart, Favorite, Follow, Ingredient, Recipe, Tag
 
 
 User = get_user_model()

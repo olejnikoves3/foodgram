@@ -20,7 +20,20 @@ class FollowAdmin(admin.ModelAdmin):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    pass
+    fields = ('name', 'author', 'text', 'cooking_time',
+              'image', 'favorite_count')
+    list_display = ('name', 'author', 'in_favorite_count',)
+    search_fields = ('name', 'author')
+    list_filter = ('tags',)
+    readonly_fields = ('favorite_count',)
+
+    @admin.display(description='В избранном')
+    def in_favorite_count(self, obj):
+        return obj.in_favorite.count()
+
+    @admin.display(description='Количество добавлений в избранное')
+    def favorite_count(self, obj):
+        return obj.in_favorite.count()
 
 
 @admin.register(RecipeIngredient)
@@ -46,7 +59,6 @@ class UserAdmin(admin.ModelAdmin):
         'email'
     )
     ordering = ('username',)
-
 
 
 @admin.register(Cart)

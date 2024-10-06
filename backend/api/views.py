@@ -1,22 +1,22 @@
+import short_url
 from django.contrib.auth import get_user_model
 from django.db.models import Count
-from djoser.serializers import SetPasswordSerializer
 from django.shortcuts import get_object_or_404
+from djoser.serializers import SetPasswordSerializer
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
+                                        IsAuthenticatedOrReadOnly,)
 from rest_framework.response import Response
-import short_url
 
 from api.filters import IngredientSearch, RecipeFilter
 from api.permissions import IsAuthorOrReadOnly
-from api.serializers import (
-    AvatarSerializer, IngredientSerializer, RecipeCreateSerializer,
-    RecipeUpdateSerializer, RecipeReadSerializer, ShortRecipeSerializer,
-    TagSerializer, UserSerializer, UserRegisterSerializer, UserWithRecipes
-)
+from api.serializers import (AvatarSerializer, IngredientSerializer,
+                             RecipeCreateSerializer, RecipeReadSerializer,
+                             RecipeUpdateSerializer, ShortRecipeSerializer,
+                             TagSerializer, UserRegisterSerializer,
+                             UserSerializer, UserWithRecipes,)
 from api.utils import generate_pdf
 from recipes.models import Cart, Favorite, Follow, Ingredient, Recipe, Tag
 

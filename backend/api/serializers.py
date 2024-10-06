@@ -6,10 +6,9 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from recipes.models import (
-    Cart, Ingredient, Favorite, Follow, Recipe, RecipeIngredient, RecipeTag,
-    Tag
-)
+from recipes.models import (Cart, Favorite, Follow, Ingredient, Recipe,
+                            RecipeIngredient, RecipeTag, Tag,)
+
 
 User = get_user_model()
 

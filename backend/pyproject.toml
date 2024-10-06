@@ -9,4 +9,10 @@ ensure_newline_before_comments = true
 known_first_party = ["recipes", "foodgram", "api"]
 
 [tool.flake8]
+ignore = ["W503"]
+exclude = ["tests/", "*/migrations/", "data/", "venv/", "env/", "docs/", "frontend/", "infra/"]
+per-file-ignores = {"*/settings.py" = ["E501"]}
+max-line-length = 79  # Если нужно, добавьте максимальную длину строки для flake8
+
+# Если используется плагин для isort:
 plugins = ["isort"]

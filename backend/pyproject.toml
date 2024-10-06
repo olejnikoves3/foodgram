@@ -13,8 +13,5 @@ known_third_party = ["short_url", "django", "rest_framework", "djoser"]
 [tool.flake8]
 ignore = ["W503"]
 exclude = ["tests/", "*/migrations/", "data/", "venv/", "env/", "docs/", "frontend/", "infra/"]
-per-file-ignores = {
-    "*/settings.py" = ["E501"],
-    "*/manage.py" = ["E501"]
-}
+per-file-ignores = {"*/settings.py" = ["E501"]}
 max-line-length = 79

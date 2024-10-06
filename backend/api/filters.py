@@ -1,9 +1,5 @@
-from django.contrib.auth import get_user_model
 from django.db.models import Case, When, Value, IntegerField
 from rest_framework.filters import BaseFilterBackend
-
-
-User = get_user_model()
 
 
 class IngredientSearch(BaseFilterBackend):

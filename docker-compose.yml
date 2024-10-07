@@ -29,16 +29,16 @@ services:
     container_name: foodgram-front
     build: ./frontend/
     volumes:
-      - ./frontend/:/app/result_build/
-      - static:/frontend_static
+      - static:/app/result_build/build
   nginx:
     container_name: foodgram-proxy
     build: ./infra/
     env_file: .env
     ports:
-      - 9090:80
+      - 8080:80
     volumes:
-      - ../frontend/build:/usr/share/nginx/html/
-      - ../docs/:/usr/share/nginx/html/api/docs/
       - static:/static
       - media:/media
+    depends_on:
+      - backend
+      - frontend

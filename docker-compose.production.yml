@@ -29,7 +29,7 @@ services:
     container_name: foodgram-front
     image: oleinikoves1/foodgram_frontend
     volumes:
-      - static:/app/build/
+      - static:/app/result_build/build
   nginx:
     container_name: foodgram-proxy
     image: oleinikoves1/foodgram_gateway

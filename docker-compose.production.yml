@@ -18,7 +18,7 @@ services:
     image: oleinikoves1/foodgram_backend
     env_file: .env
     expose:
-      - 8000
+      - "8000"
     depends_on:
       - db
     volumes:
@@ -35,7 +35,7 @@ services:
     image: oleinikoves1/foodgram_gateway
     env_file: .env
     ports:
-      - 9090:80
+      - 8000:80
     volumes:
       - static:/static
       - media:/media

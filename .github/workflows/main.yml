@@ -22,7 +22,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./backend/
+          file: ./backend/Dockerfile
           push: true
           tags: oleinikoves1/foodgram_backend:latest
   build_frontend_and_push_to_docker_hub:

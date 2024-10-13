@@ -1,7 +1,7 @@
 import short_url
 from django.contrib.auth import get_user_model
 from django.db.models import Count
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from djoser.serializers import SetPasswordSerializer
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -52,7 +52,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = SetPasswordSerializer(data=request.data,
                                            context={'request': request})
         serializer.is_valid(raise_exception=True)
-        request.user.set_password(serializer.data["new_password"])
+        request.user.set_password(serializer.data['new_password'])
         request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -218,5 +218,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk=None):
         domain = request.get_host()
         s_url = short_url.encode_url(int(pk))
-        url = "https://{}/s/{}".format(domain, s_url)
+        url = f'https://{domain}/s/{s_url}'
         return Response({'short-link': url}, status=status.HTTP_200_OK)
+
+
+def recipe_from_short_link(request, link):
+    id = short_url.decode_url(link)
+    recipe = get_object_or_404(Recipe, id=id)
+    return redirect(f'/api/recipes/{recipe.id}')

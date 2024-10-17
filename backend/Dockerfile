@@ -4,8 +4,10 @@ WORKDIR /app
 
 COPY ./requirements/requirements.backend.txt .
 
-RUN pip install -r requirements.backend.txt --no-cache-dir
+RUN pip install --upgrade pip && \
+    pip install -r requirements.backend.txt --no-cache-dir
 
+COPY data/ ../data
 COPY ./backend .
 COPY data/ ../data
 

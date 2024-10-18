@@ -169,17 +169,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
                         ingredient_name]['mes_unit'] = mes_unit
         return generate_pdf(ingredients_summary)
 
-    @action(['post'], True, permission_classes=[IsAuthenticated],)
-    def shopping_cart(self, request, pk=None):
+    def create_user_recipe_relation(self, request, model, pk, error_msg=None):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
-        if Cart.objects.filter(user=user, recipe=recipe).exists():
-            return Response('Рецепт уже добавлен в корзину.',
-                            status=status.HTTP_400_BAD_REQUEST)
-        Cart.objects.create(user=user, recipe=recipe)
+        if model.objects.filter(user=user, recipe=recipe).exists():
+            return Response(error_msg, status=status.HTTP_400_BAD_REQUEST)
+        model.objects.create(user=user, recipe=recipe)
         serializer = ShortRecipeSerializer(recipe,
                                            context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(['post'], True, permission_classes=[IsAuthenticated],)
+    def shopping_cart(self, request, pk=None):
+        error_msg = 'Рецепт уже добавлен в корзину.'
+        model = Cart
+        self.create_user_recipe_relation(request, model, pk, error_msg)
 
     @shopping_cart.mapping.delete
     def delete_from_shopping_cart(self, request, pk=None):

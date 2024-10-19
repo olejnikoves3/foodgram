@@ -74,7 +74,7 @@ class Recipe(CommonInfo):
     text = models.TextField('Описание', help_text='Опишите действия')
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления', help_text='в минутах',
-        validators=[MinValueValidator(constants.MIN_COOKING_TIME),],
+        validators=[MinValueValidator(constants.MIN_COOKING_TIME), ],
     )
     image = models.ImageField('Картинка', upload_to='recipes/images/',
                               null=True, default=None)

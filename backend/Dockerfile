@@ -9,6 +9,5 @@ RUN pip install --upgrade pip && \
 
 COPY data/ ../data
 COPY ./backend .
-COPY data/ ../data
 
 CMD ["sh", "entrypoint.sh"]

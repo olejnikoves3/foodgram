@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 
 from recipes.models import (Cart, Favorite, Follow, Ingredient, Recipe,
                             RecipeIngredient, RecipeTag, Tag, User,)
@@ -47,18 +49,16 @@ class TagAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = (
-        'username',
-        'email',
-        'first_name',
-        'last_name',
+class FoodgramUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name')
+    search_fields = ('username', 'email')
+    fieldsets = (
+        (None, {'fields': ('username', 'email', 'password')}),
+        ('Личная информация', {'fields': ('first_name', 'last_name',
+                                          'avatar')}),
+        ('Разрешения', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
+        ('Важные даты', {'fields': ('last_login', 'date_joined')}),
     )
-    search_fields = (
-        'username',
-        'email'
-    )
-    ordering = ('username',)
 
 
 @admin.register(Cart)
@@ -74,3 +74,6 @@ class FavoriteAdmin(admin.ModelAdmin):
 @admin.register(RecipeTag)
 class RecipeTagAdmin(admin.ModelAdmin):
     pass
+
+
+admin.site.unregister(Group)

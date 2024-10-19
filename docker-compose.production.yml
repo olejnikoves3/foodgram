@@ -17,8 +17,6 @@ services:
     container_name: foodgram-back
     image: oleinikoves1/foodgram_backend
     env_file: .env
-    expose:
-      - "8000"
     depends_on:
       - db
     volumes:

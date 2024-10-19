@@ -12,7 +12,7 @@ class IngredientAdmin(admin.ModelAdmin):
         'name',
         'measurement_unit',
     )
-    search_fields = ('username',)
+    search_fields = ('name',)
 
 
 @admin.register(Follow)

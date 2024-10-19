@@ -223,4 +223,4 @@ class RecipeViewSet(viewsets.ModelViewSet):
 def recipe_from_short_link(request, link):
     id = short_url.decode_url(link)
     recipe = get_object_or_404(Recipe, id=id)
-    return redirect(f'/api/recipes/{recipe.id}')
+    return redirect(f'/recipes/{recipe.id}')

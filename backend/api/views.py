@@ -1,4 +1,3 @@
-import short_url
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
@@ -9,6 +8,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly,)
 from rest_framework.response import Response
+import short_url
 
 from api.filters import IngredientSearch, RecipeFilter
 from api.permissions import IsAuthorOrReadOnly

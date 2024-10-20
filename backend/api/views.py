@@ -18,7 +18,8 @@ from api.serializers import (AvatarSerializer, IngredientSerializer,
                              TagSerializer, UserRegisterSerializer,
                              UserSerializer, UserWithRecipes,)
 from api.utils import generate_pdf
-from recipes.models import Cart, Favorite, Follow, Ingredient, Recipe, Tag
+from recipes.models import Cart, Favorite, Ingredient, Recipe, Tag
+from users.models import Follow
 
 
 User = get_user_model()

@@ -1,36 +1,11 @@
-from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.core.validators import MinValueValidator
+from django.contrib.auth import get_user_model
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Q
 
 from foodgram_backend import constants
 
 
-class User(AbstractUser):
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
-
-    email = models.EmailField('Электронная почта', unique=True)
-    username = models.CharField(
-        'Имя пользователя', unique=True,
-        max_length=constants.USERNAME_MAX_LEN,
-        validators=(UnicodeUsernameValidator,)
-    )
-    first_name = models.CharField('Имя',
-                                  max_length=constants.FIRST_NAME_MAX_LEN)
-    last_name = models.CharField('Фамилия',
-                                 max_length=constants.LAST_NAME_MAX_LEN)
-    avatar = models.ImageField('Аватар', upload_to='users/',
-                               blank=True, default=None)
-
-    class Meta(AbstractUser.Meta):
-        ordering = ['username', 'last_name', 'id']
-        verbose_name = 'пользователь'
-        verbose_name_plural = 'Пользователи'
-
-    def __str__(self):
-        return self.username
+User = get_user_model()
 
 
 class CommonInfo(models.Model):
@@ -39,7 +14,7 @@ class CommonInfo(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['name']
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -74,7 +49,8 @@ class Recipe(CommonInfo):
     text = models.TextField('Описание', help_text='Опишите действия')
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления', help_text='в минутах',
-        validators=[MinValueValidator(constants.MIN_COOKING_TIME), ],
+        validators=(MinValueValidator(constants.MIN_COOKING_TIME),
+                    MaxValueValidator(constants.MAX_COOKING_TIME))
     )
     image = models.ImageField('Картинка', upload_to='recipes/images/',
                               null=True, default=None)
@@ -82,7 +58,7 @@ class Recipe(CommonInfo):
                                     auto_now_add=True)
 
     class Meta(CommonInfo.Meta):
-        ordering = ['-pub_date', 'name']
+        ordering = ('-pub_date', 'name')
         default_related_name = 'recipes'
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
@@ -103,7 +79,7 @@ class RecipeTag(models.Model):
         verbose_name = 'теги рецептов'
         verbose_name_plural = 'Теги рецептов'
         constraints = [
-            models.UniqueConstraint(fields=['recipe', 'tag'],
+            models.UniqueConstraint(fields=('recipe', 'tag'),
                                     name='unique_tag')
         ]
 
@@ -121,19 +97,20 @@ class RecipeIngredient(models.Model):
         related_name='ingredient_recipes'
     )
     amount = models.PositiveSmallIntegerField(
-        'Количество', validators=[
+        'Количество', validators=(
             MinValueValidator(constants.MIN_AMOUNT),
-        ]
+            MaxValueValidator(constants.MAX_AMOUNT)
+        )
     )
 
     class Meta:
-        ordering = ('recipe',)
+        ordering = ('recipe', 'ingredient')
         verbose_name = 'ингридиенты в рецепте'
         verbose_name_plural = 'Ингридиенты в рецепте'
-        constraints = [
-            models.UniqueConstraint(fields=['recipe', 'ingredient'],
+        constraints = (
+            models.UniqueConstraint(fields=('recipe', 'ingredient'),
                                     name='unique_ingredient')
-        ]
+        )
 
     def __str__(self):
         return (
@@ -142,66 +119,38 @@ class RecipeIngredient(models.Model):
         )
 
 
-class Cart(models.Model):
+class UserReciperelations(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
         verbose_name='Пользователь',
-        related_name='recipes_in_cart'
     )
     recipe = models.ForeignKey(Recipe, verbose_name='Рецепт',
                                on_delete=models.CASCADE,
-                               related_name='in_users_carts'
                                )
 
     class Meta:
+        abstract = True
+        constraints = (
+            models.UniqueConstraint(fields=('user', 'recipe'),
+                                    name='unique recipe in %(class)s'),
+        )
+
+
+class Cart(UserReciperelations):
+
+    class Meta(UserReciperelations.Meta):
         verbose_name = 'список покупок'
         verbose_name_plural = 'Списки покупок'
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'recipe'],
-                                    name='unique recipe in cart'),
-        ]
 
     def __str__(self):
         return f'{self.recipe.name} в корзине у {self.user.username}'
 
 
-class Favorite(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        verbose_name='Пользователь',
-        related_name='favorited_recipes'
-    )
-    recipe = models.ForeignKey(Recipe, verbose_name='Рецепт',
-                               on_delete=models.CASCADE,
-                               related_name='in_favorite')
+class Favorite(UserReciperelations):
 
     class Meta:
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранное'
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'recipe'],
-                                    name='unique recipe in favorited'),
-        ]
 
     def __str__(self):
         return f'{self.recipe.name} в избранном у {self.user.username}'
-
-
-class Follow(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,
-                             related_name='following')
-    following = models.ForeignKey(User, on_delete=models.CASCADE,
-                                  related_name='followers')
-
-    class Meta:
-        verbose_name = 'подписка'
-        verbose_name_plural = 'Подписки'
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'following'],
-                                    name='unique_following'),
-            models.CheckConstraint(check=~Q(
-                user=models.F('following')), name='no self follow')
-        ]
-
-    def __str__(self):
-        return f'{self.user.username} подписан на {self.following.username}'

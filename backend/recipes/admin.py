@@ -1,9 +1,8 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
 
-from recipes.models import (Cart, Favorite, Follow, Ingredient, Recipe,
-                            RecipeIngredient, RecipeTag, Tag, User,)
+from recipes.models import (Cart, Favorite, Ingredient, Recipe,
+                            RecipeIngredient, RecipeTag, Tag)
 
 
 @admin.register(Ingredient)
@@ -13,11 +12,6 @@ class IngredientAdmin(admin.ModelAdmin):
         'measurement_unit',
     )
     search_fields = ('name',)
-
-
-@admin.register(Follow)
-class FollowAdmin(admin.ModelAdmin):
-    pass
 
 
 @admin.register(Recipe)
@@ -46,19 +40,6 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     pass
-
-
-@admin.register(User)
-class FoodgramUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name')
-    search_fields = ('username', 'email')
-    fieldsets = (
-        (None, {'fields': ('username', 'email', 'password')}),
-        ('Личная информация', {'fields': ('first_name', 'last_name',
-                                          'avatar')}),
-        ('Разрешения', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
-        ('Важные даты', {'fields': ('last_login', 'date_joined')}),
-    )
 
 
 @admin.register(Cart)

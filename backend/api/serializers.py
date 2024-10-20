@@ -6,8 +6,9 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from recipes.models import (Cart, Favorite, Follow, Ingredient, Recipe,
+from recipes.models import (Cart, Favorite, Ingredient, Recipe,
                             RecipeIngredient, RecipeTag, Tag,)
+from users.models import Follow
 
 
 User = get_user_model()
@@ -257,24 +258,24 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate_tags(self, value):
         if not value:
             raise serializers.ValidationError(
-                "Поле не может быть пустым."
+                'Поле не может быть пустым.'
             )
         unique_tags = {tag.id for tag in value}
         if len(value) != len(unique_tags):
             raise serializers.ValidationError(
-                "В запросе содержатся повторяющиеся теги."
+                'В запросе содержатся повторяющиеся теги.'
             )
         return value
 
     def validate_ingredients(self, value):
         if not value:
             raise serializers.ValidationError(
-                "Поле не может быть пустым."
+                'Поле не может быть пустым.'
             )
         unique_ingredients = {ing['id'].id for ing in value}
         if len(value) != len(unique_ingredients):
             raise serializers.ValidationError(
-                "В запросе содержатся повторяющиеся ингридиенты."
+                'В запросе содержатся повторяющиеся ингридиенты.'
             )
         return value
 

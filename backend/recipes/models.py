@@ -148,7 +148,7 @@ class Cart(UserReciperelations):
 
 class Favorite(UserReciperelations):
 
-    class Meta:
+    class Meta(UserReciperelations.Meta):
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранное'
 

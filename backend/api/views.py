@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from djoser.serializers import SetPasswordSerializer
-from rest_framework import filters, status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
@@ -10,7 +11,7 @@ from rest_framework.permissions import (AllowAny, IsAuthenticated,
 from rest_framework.response import Response
 import short_url
 
-from api.filters import RecipeFilter
+from api.filters import IngredientFilter, RecipeFilter
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (AvatarSerializer, IngredientSerializer,
                              RecipeCreateSerializer, RecipeReadSerializer,
@@ -35,8 +36,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('^name',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -120,7 +121,8 @@ class UserViewSet(viewsets.ModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.prefetch_related(
         'tags', 'ingredients').select_related('author')
-    filter_backends = (RecipeFilter,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
 
@@ -133,9 +135,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         self.object = serializer.save(author=self.request.user)
-
-    def perform_update(self, serializer):
-        self.object = serializer.save()
 
     def create(self, request, *args, **kwargs):
         super().create(request, *args, **kwargs)
@@ -152,7 +151,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(['get'], False, permission_classes=[IsAuthenticated],)
     def download_shopping_cart(self, request):
         user = request.user
-        recipes_in_cart = user.recipes_in_cart.all()
+        recipes_in_cart = user.cart_set.all()
         ingredients_summary = {}
         for cart_item in recipes_in_cart:
             recipe = cart_item.recipe

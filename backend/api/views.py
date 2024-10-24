@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from djoser.serializers import SetPasswordSerializer
-from rest_framework import status, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
@@ -10,7 +10,7 @@ from rest_framework.permissions import (AllowAny, IsAuthenticated,
 from rest_framework.response import Response
 import short_url
 
-from api.filters import IngredientSearch, RecipeFilter
+from api.filters import RecipeFilter
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (AvatarSerializer, IngredientSerializer,
                              RecipeCreateSerializer, RecipeReadSerializer,
@@ -35,8 +35,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = [IngredientSearch]
-    search_fields = ['name']
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
 
 
 class UserViewSet(viewsets.ModelViewSet):

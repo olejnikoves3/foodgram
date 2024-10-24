@@ -18,7 +18,7 @@ class IngredientSearch(BaseFilterBackend):
         return queryset
 
 
-class RecipeFilter (BaseFilterBackend):
+class RecipeFilter(BaseFilterBackend):
 
     def filter_queryset(self, request, queryset, view):
         author_id = request.query_params.get('author')

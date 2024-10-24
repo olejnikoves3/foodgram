@@ -1,37 +1,40 @@
-from django.db.models import Case, IntegerField, Value, When
-from rest_framework.filters import BaseFilterBackend
+from django_filters.rest_framework import BooleanFilter, CharFilter, FilterSet
+
+from recipes.models import Ingredient, Recipe
 
 
-class IngredientSearch(BaseFilterBackend):
+class IngredientFilter(FilterSet):
+    name = CharFilter(lookup_expr='istartswith')
 
-    def filter_queryset(self, request, queryset, view):
-        name = request.query_params.get('name')
-        if name:
-            queryset = queryset.filter(name__icontains=name)
-            queryset = queryset.annotate(
-                starts_with=Case(
-                    When(name__istartswith=name, then=Value(0)),
-                    default=Value(1),
-                    output_field=IntegerField(),
-                )
-            ).order_by('starts_with', 'name')
+    class Meta:
+        model = Ingredient
+        fields = ('name',)
+
+
+class RecipeFilter(FilterSet):
+    is_in_shopping_cart = BooleanFilter(method='filter_is_in_shopping_cart')
+    is_favorited = BooleanFilter(method='filter_is_favorited')
+    tags = CharFilter(method="filter_tags")
+
+    class Meta:
+        model = Recipe
+        fields = ('is_in_shopping_cart', 'is_favorited', 'author',
+                  'tags')
+
+    def filter_is_in_shopping_cart(self, queryset, name, value):
+        user = self.request.user
+        if user.is_authenticated and value:
+            return queryset.filter(cart__user=user)
         return queryset
 
+    def filter_is_favorited(self, queryset, name, value):
+        user = self.request.user
+        if user.is_authenticated and value:
+            return queryset.filter(favorite__user=user)
+        return queryset
 
-class RecipeFilter(BaseFilterBackend):
-
-    def filter_queryset(self, request, queryset, view):
-        author_id = request.query_params.get('author')
-        if author_id:
-            queryset = queryset.filter(author__id=author_id)
-        tags = request.query_params.getlist('tags')
-        if tags:
-            queryset = queryset.filter(tags__slug__in=tags).distinct()
-        is_favorited = request.query_params.get('is_favorited')
-        if is_favorited == '1' and request.user.is_authenticated:
-            queryset = queryset.filter(in_favorite__user=request.user)
-        is_in_shopping_cart = request.query_params.get(
-            'is_in_shopping_cart')
-        if is_in_shopping_cart == '1' and request.user.is_authenticated:
-            queryset = queryset.filter(in_users_carts__user=request.user)
+    def filter_tags(self, queryset, name, value):
+        if value:
+            tags = self.request.GET.getlist('tags')
+            return queryset.filter(tags__slug__in=tags).distinct()
         return queryset

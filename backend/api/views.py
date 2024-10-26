@@ -190,26 +190,24 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(['post'], True, permission_classes=[IsAuthenticated],)
     def shopping_cart(self, request, pk=None):
         error_msg = 'Рецепт уже добавлен в корзину.'
-        model = Cart
-        return self.create_user_recipe_relation(request, model, pk, error_msg)
+        return self.create_user_recipe_relation(request, Cart, pk, error_msg)
 
     @shopping_cart.mapping.delete
     def delete_from_shopping_cart(self, request, pk=None):
         error_msg = 'Рецепт не был добавлен в корзину.'
-        model = Cart
-        return self.delete_user_recipe_relation(request, model, pk, error_msg)
+        return self.delete_user_recipe_relation(request, Cart, pk, error_msg)
 
     @action(['post'], True, permission_classes=[IsAuthenticated],)
     def favorite(self, request, pk=None):
         error_msg = 'Рецепт уже добавлен в избранное.'
-        model = Favorite
-        return self.create_user_recipe_relation(request, model, pk, error_msg)
+        return self.create_user_recipe_relation(request, Favorite, pk,
+                                                error_msg)
 
     @favorite.mapping.delete
     def delete_from_favorite(self, request, pk=None):
         error_msg = 'Рецепт не был добавлен в избранное.'
-        model = Favorite
-        return self.delete_user_recipe_relation(request, model, pk, error_msg)
+        return self.delete_user_recipe_relation(request, Favorite, pk,
+                                                error_msg)
 
     @action(['get'], True, permission_classes=[AllowAny],
             url_path='get-link')

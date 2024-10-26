@@ -1,11 +1,10 @@
-import base64
 import re
 
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
+from api.fields import Base64ImageField
 from recipes.models import (Cart, Favorite, Ingredient, Recipe,
                             RecipeIngredient, RecipeTag, Tag,)
 from users.models import Follow
@@ -62,17 +61,8 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         user = self.context.get('request').user
         if user.is_authenticated:
-            return Follow.objects.filter(user=user, following=obj).exists()
+            return obj.followers.filter(user=user).exists()
         return False
-
-
-class Base64ImageField(serializers.ImageField):
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
-        return super().to_internal_value(data)
 
 
 class AvatarSerializer(serializers.Serializer):
@@ -80,8 +70,7 @@ class AvatarSerializer(serializers.Serializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()
-    default = serializers.CurrentUserDefault()
+    user = serializers.SlugRelatedField(slug_field='username')
 
     class Meta:
         model = Follow

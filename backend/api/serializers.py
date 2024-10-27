@@ -70,7 +70,6 @@ class AvatarSerializer(serializers.Serializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(slug_field='username')
 
     class Meta:
         model = Follow
@@ -99,7 +98,7 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ['id', 'name', 'measurement_unit', 'amount']
+        fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
@@ -122,13 +121,13 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         user = self.context.get('request').user
         if user.is_authenticated:
-            return Favorite.objects.filter(user=user, recipe=obj).exists()
+            return obj.favorite_set.filter(user=user).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context.get('request').user
         if user.is_authenticated:
-            return Cart.objects.filter(user=user, recipe=obj).exists()
+            return obj.cart_set.filter(user=user).exists()
         return False
 
 
@@ -150,7 +149,6 @@ class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(),
     )
-    amount = serializers.IntegerField(min_value=1)
 
     class Meta:
         model = RecipeIngredient
@@ -166,79 +164,25 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     )
     image = Base64ImageField()
 
-    MANY_FIELDS = {'tags': 'update_tags',
-                   'recipe_ingredients': 'update_ingredients'
-                   }
-
     class Meta:
         model = Recipe
         fields = ('ingredients', 'tags', 'image', 'name', 'text',
                   'cooking_time')
 
-    @classmethod
-    def update_tags(cls, instance, data):
-        old_tags_ids = set(instance.tags.values_list('id', flat=True))
-        new_tags_ids = set([a.id for a in data])
-        RecipeTag.objects.filter(
-            recipe_id=instance.id, tag_id__in=old_tags_ids - new_tags_ids
-        ).delete()
-        RecipeTag.objects.bulk_create([
-            RecipeTag(
-                recipe_id=instance.id, tag_id=tag_id
-            ) for tag_id in new_tags_ids - old_tags_ids
-        ])
-
-    @classmethod
-    def update_ingredients(cls, instance, new_ingredients):
-        old_ingredients_dict = {
-            ri.ingredient_id: ri for ri in instance.recipe_ingredients.all()}
-        new_ingredients_dict = {
-            ri['id'].id: ri for ri in new_ingredients if ri[
-                'id'].id not in old_ingredients_dict}
-        updated_ingredients_dict = {
-            ri['id'].id: ri for ri in new_ingredients if ri[
-                'id'].id in old_ingredients_dict}
-        old_ingredients_set = set(old_ingredients_dict.keys()) - \
-            set(updated_ingredients_dict.keys())
-        updated_ingredients_dict = dict(filter(
-            lambda kv: kv[1]['amount'] != old_ingredients_dict[kv[0]].amount
-            and (kv[1]['amount'] is not None or old_ingredients_dict[
-                kv[0]].amount is not None),
-            updated_ingredients_dict.items()
-        ))
-        RecipeIngredient.objects.filter(
-            recipe_id=instance.id, ingredient_id__in=old_ingredients_set
-        ).delete()
-        RecipeIngredient.objects.bulk_create([
-            RecipeIngredient(recipe_id=instance.id, ingredient_id=ri_id,
-                             amount=ri['amount'])
-            for ri_id, ri in new_ingredients_dict.items()
-        ])
-        RecipeIngredient.objects.bulk_update([
-            RecipeIngredient(id=old_ingredients_dict[ri_id].id,
-                             amount=ri['amount'])
-            for ri_id, ri in updated_ingredients_dict.items()
-        ], fields=['amount'])
-
-    def split_validated_data(self, validated_data):
-        return {
-            key: value for key, value in validated_data.items()
-            if key not in self.MANY_FIELDS
-        }, {
-            key: validated_data[key] for key in self.MANY_FIELDS
-        }
-
-    def update_many2us(self, instance, validated_data):
-        for field, updater_name in self.MANY_FIELDS.items():
-            data = validated_data.pop(field, None)
-            updater = getattr(self, updater_name)
-            if data is not None or not self.partial:
-                updater(instance, data or [])
-        return instance
-
     def create(self, validated_data):
-        basic, many2us = self.split_validated_data(validated_data)
-        return self.update_many2us(super().create(basic), many2us)
+        ingredients_data = validated_data.pop('recipe_ingredients')
+        tags_data = validated_data.pop('tags')
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.tags.set(tags_data)
+        recipe_ingredient_objs = [
+            RecipeIngredient(
+                recipe=recipe,
+                ingredient=ingredient_data['id'],
+                amount=ingredient_data['amount']
+            ) for ingredient_data in ingredients_data
+        ]
+        RecipeIngredient.objects.bulk_create(recipe_ingredient_objs)
+        return recipe
 
     def update(self, instance, validated_data):
         basic, many2us = self.split_validated_data(validated_data)
@@ -267,6 +211,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 'В запросе содержатся повторяющиеся ингридиенты.'
             )
         return value
+
+    def to_representation(self, instance):
+        return RecipeReadSerializer(
+            instance, context=self.context
+        ).data
 
 
 class RecipeUpdateSerializer(RecipeCreateSerializer):

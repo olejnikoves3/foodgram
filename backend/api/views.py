@@ -13,11 +13,12 @@ import short_url
 
 from api.filters import IngredientFilter, RecipeFilter
 from api.permissions import IsAuthorOrReadOnly
-from api.serializers import (AvatarSerializer, IngredientSerializer,
-                             RecipeCreateSerializer, RecipeReadSerializer,
-                             RecipeUpdateSerializer, ShortRecipeSerializer,
-                             TagSerializer, UserRegisterSerializer,
-                             UserSerializer, UserWithRecipes,)
+from api.serializers import (
+    AvatarSerializer, IngredientSerializer, FollowSerializer,
+    RecipeCreateSerializer, RecipeReadSerializer, RecipeUpdateSerializer,
+    ShortRecipeSerializer, TagSerializer, UserRegisterSerializer,
+    UserSerializer, UserWithRecipes
+)
 from api.utils import generate_pdf
 from recipes.models import Cart, Favorite, Ingredient, Recipe, Tag
 from users.models import Follow
@@ -94,13 +95,19 @@ class UserViewSet(viewsets.ModelViewSet):
     def subscribe(self, request, pk=None):
         user = request.user
         user_to_follow = get_object_or_404(User, id=pk)
-        if user == user_to_follow:
-            return Response('Нельзя подписаться на самого себя.',
-                            status=status.HTTP_400_BAD_REQUEST)
-        if Follow.objects.filter(user=user, following=user_to_follow):
-            return Response('Вы уже подписаны на этого пользователя.',
-                            status=status.HTTP_400_BAD_REQUEST)
-        Follow.objects.create(user=user, following=user_to_follow)
+        serializer = FollowSerializer(
+            data={'user': user.id, 'following': user_to_follow.id},
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        # if user == user_to_follow:
+        #     return Response('Нельзя подписаться на самого себя.',
+        #                     status=status.HTTP_400_BAD_REQUEST)
+        # if Follow.objects.filter(user=user, following=user_to_follow):
+        #     return Response('Вы уже подписаны на этого пользователя.',
+        #                     status=status.HTTP_400_BAD_REQUEST)
+        # Follow.objects.create(user=user, following=user_to_follow)
         obj = User.objects.annotate(recipes_count=Count('recipes')).get(id=pk)
         serializer = UserWithRecipes(obj, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -142,11 +149,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                           context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def update(self, request, *args, **kwargs):
-        super().update(request, *args, **kwargs)
-        serializer = RecipeReadSerializer(instance=self.object,
-                                          context={'request': request})
-        return Response(serializer.data)
+    # def update(self, request, *args, **kwargs):
+    #     super().update(request, *args, **kwargs)
+    #     serializer = RecipeReadSerializer(instance=self.object,
+    #                                       context={'request': request})
+    #     return Response(serializer.data)
 
     @action(['get'], False, permission_classes=[IsAuthenticated],)
     def download_shopping_cart(self, request):

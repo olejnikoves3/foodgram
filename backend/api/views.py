@@ -16,8 +16,8 @@ from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     AvatarSerializer, IngredientSerializer, FollowSerializer,
     RecipeCreateSerializer, RecipeReadSerializer, RecipeUpdateSerializer,
-    ShortRecipeSerializer, TagSerializer, UserRegisterSerializer,
-    UserSerializer, UserWithRecipes
+    ShortRecipeSerializer, TagSerializer, UserRecipeRelationCreateSerializer,
+    UserRegisterSerializer, UserSerializer, UserWithRecipes
 )
 from api.utils import generate_pdf
 from recipes.models import Cart, Favorite, Ingredient, Recipe, Tag
@@ -101,13 +101,6 @@ class UserViewSet(viewsets.ModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        # if user == user_to_follow:
-        #     return Response('Нельзя подписаться на самого себя.',
-        #                     status=status.HTTP_400_BAD_REQUEST)
-        # if Follow.objects.filter(user=user, following=user_to_follow):
-        #     return Response('Вы уже подписаны на этого пользователя.',
-        #                     status=status.HTTP_400_BAD_REQUEST)
-        # Follow.objects.create(user=user, following=user_to_follow)
         obj = User.objects.annotate(recipes_count=Count('recipes')).get(id=pk)
         serializer = UserWithRecipes(obj, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -143,18 +136,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         self.object = serializer.save(author=self.request.user)
 
-    def create(self, request, *args, **kwargs):
-        super().create(request, *args, **kwargs)
-        serializer = RecipeReadSerializer(instance=self.object,
-                                          context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    # def update(self, request, *args, **kwargs):
-    #     super().update(request, *args, **kwargs)
-    #     serializer = RecipeReadSerializer(instance=self.object,
-    #                                       context={'request': request})
-    #     return Response(serializer.data)
-
     @action(['get'], False, permission_classes=[IsAuthenticated],)
     def download_shopping_cart(self, request):
         user = request.user
@@ -176,14 +157,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
                         ingredient_name]['mes_unit'] = mes_unit
         return generate_pdf(ingredients_summary)
 
-    def create_user_recipe_relation(self, request, model, pk, error_msg=None):
+    def create_user_recipe_relation(self, request, model, pk):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
-        if model.objects.filter(user=user, recipe=recipe).exists():
-            return Response(error_msg, status=status.HTTP_400_BAD_REQUEST)
-        model.objects.create(user=user, recipe=recipe)
-        serializer = ShortRecipeSerializer(recipe,
-                                           context={'request': request})
+        serializer = UserRecipeRelationCreateSerializer(
+            data={'user': user.id, 'recipe': pk},
+            model_class=model, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        # if model.objects.filter(user=user, recipe=recipe).exists():
+        #     return Response(error_msg, status=status.HTTP_400_BAD_REQUEST)
+        # model.objects.create(user=user, recipe=recipe)
+        # serializer = ShortRecipeSerializer(recipe,
+        #                                    context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete_user_recipe_relation(self, request, model, pk, error_msg=None):
@@ -196,8 +183,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(['post'], True, permission_classes=[IsAuthenticated],)
     def shopping_cart(self, request, pk=None):
-        error_msg = 'Рецепт уже добавлен в корзину.'
-        return self.create_user_recipe_relation(request, Cart, pk, error_msg)
+        return self.create_user_recipe_relation(request, Cart, pk)
 
     @shopping_cart.mapping.delete
     def delete_from_shopping_cart(self, request, pk=None):
@@ -206,9 +192,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(['post'], True, permission_classes=[IsAuthenticated],)
     def favorite(self, request, pk=None):
-        error_msg = 'Рецепт уже добавлен в избранное.'
-        return self.create_user_recipe_relation(request, Favorite, pk,
-                                                error_msg)
+        return self.create_user_recipe_relation(request, Favorite, pk)
 
     @favorite.mapping.delete
     def delete_from_favorite(self, request, pk=None):

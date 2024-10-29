@@ -5,8 +5,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from api.fields import Base64ImageField
-from recipes.models import (Cart, Favorite, Ingredient, Recipe,
-                            RecipeIngredient, RecipeTag, Tag,)
+from recipes.models import (Ingredient, Recipe, RecipeIngredient, Tag,)
 from users.models import Follow
 
 
@@ -74,13 +73,13 @@ class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
         fields = ('user', 'following')
-        validators = [
+        validators = (
             UniqueTogetherValidator(
                 queryset=Follow.objects.all(),
                 fields=['user', 'following'],
                 message='Вы уже подписаны на этого пользователя'
-            )
-        ]
+            ),
+        )
 
     def validate_following(self, value):
         if self.context['request'].user == value:
@@ -184,10 +183,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         RecipeIngredient.objects.bulk_create(recipe_ingredient_objs)
         return recipe
 
-    def update(self, instance, validated_data):
-        basic, many2us = self.split_validated_data(validated_data)
-        return self.update_many2us(super().update(instance, basic), many2us)
-
     def validate_tags(self, value):
         if not value:
             raise serializers.ValidationError(
@@ -234,6 +229,31 @@ class RecipeUpdateSerializer(RecipeCreateSerializer):
             )
         return data
 
+    def update(self, instance, validated_data):
+        image = validated_data.pop('image', None)
+        if image is not None:
+            instance.image = image
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text', instance.text)
+        instance.cooking_time = validated_data.get('cooking_time',
+                                                   instance.cooking_time)
+        instance.save()
+        tags_data = validated_data.pop('tags', None)
+        if tags_data is not None:
+            instance.tags.set(tags_data)
+        ingredients_data = validated_data.pop('recipe_ingredients', None)
+        if ingredients_data is not None:
+            instance.recipe_ingredients.all().delete()
+            recipe_ingredient_objs = [
+                RecipeIngredient(
+                    recipe=instance,
+                    ingredient=ingredient_data['id'],
+                    amount=ingredient_data['amount']
+                ) for ingredient_data in ingredients_data
+            ]
+            RecipeIngredient.objects.bulk_create(recipe_ingredient_objs)
+        return instance
+
 
 class UserWithRecipes(UserSerializer):
     recipes = serializers.SerializerMethodField()
@@ -254,3 +274,30 @@ class UserWithRecipes(UserSerializer):
             pass
         return ShortRecipeSerializer(recipes, many=True,
                                      context={'request': request}).data
+
+
+class UserRecipeRelationCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = None
+        fields = ('user', 'recipe')
+
+    def __init__(self, *args, **kwargs):
+        model_class = kwargs.pop('model_class', None)
+        if model_class:
+            self.Meta.model = model_class
+            self.Meta.validators = (
+                UniqueTogetherValidator(
+                    queryset=model_class.objects.all(),
+                    fields=('user', 'recipe'),
+                    message=(
+                        'Рецепт уже добавлен в '
+                        f'{model_class._meta.verbose_name}.'
+                    )
+                ),
+            )
+        super().__init__(*args, **kwargs)
+
+    def to_representation(self, instance):
+        recipe = instance.recipe
+        return ShortRecipeSerializer(recipe, context=self.context).data

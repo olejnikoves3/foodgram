@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect
 from djoser.serializers import SetPasswordSerializer
 from django_filters.rest_framework import DjangoFilterBackend
@@ -16,7 +16,7 @@ from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     AvatarSerializer, IngredientSerializer, FollowSerializer,
     RecipeCreateSerializer, RecipeReadSerializer, RecipeUpdateSerializer,
-    ShortRecipeSerializer, TagSerializer, UserRecipeRelationCreateSerializer,
+    TagSerializer, UserRecipeRelationCreateSerializer,
     UserRegisterSerializer, UserSerializer, UserWithRecipes
 )
 from api.utils import generate_pdf
@@ -123,7 +123,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         'tags', 'ingredients').select_related('author')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    http_method_names = ('get', 'post', 'patch', 'delete')
     permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
 
     def get_serializer_class(self):
@@ -139,38 +139,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(['get'], False, permission_classes=[IsAuthenticated],)
     def download_shopping_cart(self, request):
         user = request.user
-        recipes_in_cart = user.cart_set.all()
-        ingredients_summary = {}
-        for cart_item in recipes_in_cart:
-            recipe = cart_item.recipe
-            for recipe_ingredient in recipe.recipe_ingredients.all():
-                ingredient_name = recipe_ingredient.ingredient.name
-                if ingredient_name in ingredients_summary:
-                    ingredients_summary[
-                        ingredient_name]['amount'] += recipe_ingredient.amount
-                else:
-                    mes_unit = recipe_ingredient.ingredient.measurement_unit
-                    ingredients_summary[ingredient_name] = {}
-                    ingredients_summary[
-                        ingredient_name]['amount'] = recipe_ingredient.amount
-                    ingredients_summary[
-                        ingredient_name]['mes_unit'] = mes_unit
+        ingredients_summary = user.cart_set.values(
+            'recipe__ingredients__name',
+            'recipe__ingredients__measurement_unit'
+        ).annotate(total_amount=Sum('recipe__recipe_ingredients__amount'))
         return generate_pdf(ingredients_summary)
 
     def create_user_recipe_relation(self, request, model, pk):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
         serializer = UserRecipeRelationCreateSerializer(
-            data={'user': user.id, 'recipe': pk},
+            data={'user': user.id, 'recipe': recipe.id},
             model_class=model, context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        # if model.objects.filter(user=user, recipe=recipe).exists():
-        #     return Response(error_msg, status=status.HTTP_400_BAD_REQUEST)
-        # model.objects.create(user=user, recipe=recipe)
-        # serializer = ShortRecipeSerializer(recipe,
-        #                                    context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete_user_recipe_relation(self, request, model, pk, error_msg=None):

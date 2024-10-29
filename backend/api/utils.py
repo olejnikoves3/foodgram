@@ -28,10 +28,11 @@ def generate_pdf(ingredients_summary):
     y_position = height - 100
     counter = 1
     for ingredient in ingredients_summary:
-        amount = ingredients_summary[ingredient]['amount']
-        mes_unit = ingredients_summary[ingredient]['mes_unit']
+        ing_name = ingredient['recipe__ingredients__name']
+        amount = ingredient['total_amount']
+        mes_unit = ingredient['recipe__ingredients__measurement_unit']
         pdf.drawString(100, y_position,
-                       f'{counter}. {ingredient}: {amount} {mes_unit}')
+                       f'{counter}. {ing_name}: {amount} {mes_unit}')
         counter += 1
         y_position -= 20
         if y_position < 50:

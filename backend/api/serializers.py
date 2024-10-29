@@ -5,7 +5,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from api.fields import Base64ImageField
-from recipes.models import (Ingredient, Recipe, RecipeIngredient, Tag,)
+from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 from users.models import Follow
 
 
@@ -76,7 +76,7 @@ class FollowSerializer(serializers.ModelSerializer):
         validators = (
             UniqueTogetherValidator(
                 queryset=Follow.objects.all(),
-                fields=['user', 'following'],
+                fields=('user', 'following'),
                 message='Вы уже подписаны на этого пользователя'
             ),
         )
@@ -111,10 +111,10 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = [
+        fields = (
             'id', 'tags', 'author', 'ingredients', 'is_favorited',
             'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time',
-        ]
+        )
         read_only_fields = ('author', 'tags', 'ingredients',)
 
     def get_is_favorited(self, obj):
@@ -217,9 +217,9 @@ class RecipeUpdateSerializer(RecipeCreateSerializer):
     image = Base64ImageField(required=False)
 
     def validate(self, data):
-        required_fields = [
+        required_fields = (
             'tags', 'recipe_ingredients', 'name', 'text', 'cooking_time'
-        ]
+        )
         missing_fields = [
             field for field in required_fields if field not in data
         ]

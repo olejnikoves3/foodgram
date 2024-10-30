@@ -12,6 +12,7 @@ from rest_framework.response import Response
 import short_url
 
 from api.filters import IngredientFilter, RecipeFilter
+from api.paginators import CustomPagination
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     AvatarSerializer, IngredientSerializer, FollowSerializer,
@@ -83,7 +84,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(['get'], False, permission_classes=[IsAuthenticated], )
     def subscriptions(self, request):
         user = request.user
-        paginator = LimitOffsetPagination()
+        paginator = CustomPagination()
         queryset = User.objects.filter(followers__user=user).annotate(
             recipe_count=Count('recipes')).order_by('-id')
         paginated_queryset = paginator.paginate_queryset(queryset, request)

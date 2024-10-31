@@ -154,7 +154,7 @@ class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
         fields = ('id', 'amount')
 
 
-class RecipeCreateSerializer(serializers.ModelSerializer):
+class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True, required=True
     )
@@ -168,11 +168,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         fields = ('ingredients', 'tags', 'image', 'name', 'text',
                   'cooking_time')
 
-    def create(self, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients')
-        tags_data = validated_data.pop('tags')
-        recipe = Recipe.objects.create(**validated_data)
-        recipe.tags.set(tags_data)
+    def create_recipe_igredient(self, recipe, ingredients_data):
         recipe_ingredient_objs = [
             RecipeIngredient(
                 recipe=recipe,
@@ -181,7 +177,19 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             ) for ingredient_data in ingredients_data
         ]
         RecipeIngredient.objects.bulk_create(recipe_ingredient_objs)
+
+    def create(self, validated_data):
+        ingredients_data = validated_data.pop('recipe_ingredients')
+        recipe = super().create(validated_data)
+        self.create_recipe_igredient(recipe, ingredients_data)
         return recipe
+
+    def update(self, instance, validated_data):
+        ingredients_data = validated_data.pop('recipe_ingredients')
+        instance = super().update(instance, validated_data)
+        instance.recipe_ingredients.all().delete()
+        self.create_recipe_igredient(instance, ingredients_data)
+        return instance
 
     def validate_tags(self, value):
         if not value:
@@ -207,15 +215,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def to_representation(self, instance):
-        return RecipeReadSerializer(
-            instance, context=self.context
-        ).data
-
-
-class RecipeUpdateSerializer(RecipeCreateSerializer):
-    image = Base64ImageField(required=False)
-
     def validate(self, data):
         required_fields = (
             'tags', 'recipe_ingredients', 'name', 'text', 'cooking_time'
@@ -229,30 +228,10 @@ class RecipeUpdateSerializer(RecipeCreateSerializer):
             )
         return data
 
-    def update(self, instance, validated_data):
-        image = validated_data.pop('image', None)
-        if image is not None:
-            instance.image = image
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get('cooking_time',
-                                                   instance.cooking_time)
-        instance.save()
-        tags_data = validated_data.pop('tags', None)
-        if tags_data is not None:
-            instance.tags.set(tags_data)
-        ingredients_data = validated_data.pop('recipe_ingredients', None)
-        if ingredients_data is not None:
-            instance.recipe_ingredients.all().delete()
-            recipe_ingredient_objs = [
-                RecipeIngredient(
-                    recipe=instance,
-                    ingredient=ingredient_data['id'],
-                    amount=ingredient_data['amount']
-                ) for ingredient_data in ingredients_data
-            ]
-            RecipeIngredient.objects.bulk_create(recipe_ingredient_objs)
-        return instance
+    def to_representation(self, instance):
+        return RecipeReadSerializer(
+            instance, context=self.context
+        ).data
 
 
 class UserWithRecipes(UserSerializer):

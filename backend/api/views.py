@@ -15,7 +15,7 @@ from api.paginators import CustomPagination
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     AvatarSerializer, IngredientSerializer, FollowSerializer,
-    RecipeCreateSerializer, RecipeReadSerializer, RecipeUpdateSerializer,
+    RecipeCreateUpdateSerializer, RecipeReadSerializer,
     TagSerializer, UserRecipeRelationCreateSerializer,
     UserRegisterSerializer, UserSerializer, UserWithRecipes
 )
@@ -127,11 +127,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
 
     def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return RecipeCreateSerializer
-        elif self.request.method == 'PATCH':
-            return RecipeUpdateSerializer
-        return RecipeReadSerializer
+        if self.request.method == 'GET':
+            return RecipeReadSerializer
+        return RecipeCreateUpdateSerializer
 
     def perform_create(self, serializer):
         self.object = serializer.save(author=self.request.user)

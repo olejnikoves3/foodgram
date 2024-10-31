@@ -1,4 +1,5 @@
-from django_filters.rest_framework import BooleanFilter, CharFilter, FilterSet
+from django_filters.rest_framework import (BooleanFilter, CharFilter,
+                                           FilterSet, AllValuesMultipleFilter)
 
 from recipes.models import Ingredient, Recipe
 
@@ -14,7 +15,7 @@ class IngredientFilter(FilterSet):
 class RecipeFilter(FilterSet):
     is_in_shopping_cart = BooleanFilter(method='filter_is_in_shopping_cart')
     is_favorited = BooleanFilter(method='filter_is_favorited')
-    tags = CharFilter(method="filter_tags")
+    tags = AllValuesMultipleFilter(field_name='tags__slug')
 
     class Meta:
         model = Recipe
@@ -31,10 +32,4 @@ class RecipeFilter(FilterSet):
         user = self.request.user
         if user.is_authenticated and value:
             return queryset.filter(favorite__user=user)
-        return queryset
-
-    def filter_tags(self, queryset, name, value):
-        if value:
-            tags = self.request.GET.getlist('tags')
-            return queryset.filter(tags__slug__in=tags).distinct()
         return queryset
